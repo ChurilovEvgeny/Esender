@@ -7,7 +7,7 @@ class Client(models.Model):
     """Модель клиента, содержит поля: имя, email, комментарий."""
     name = models.CharField(max_length=255, verbose_name='Ф. И. О.')
     email = models.EmailField(verbose_name='Email')
-    comment = models.TextField(verbose_name='Комментарий')
+    comment = models.TextField(verbose_name='Комментарий', **NULLABLE)
 
     def __str__(self):
         return f"{self.name} - {self.email}"
@@ -40,17 +40,31 @@ class AttemptsNewsletter(models.Model):
         return f"Рассылка {self.date_time_last_sent} - {self.status}"
 
     class Meta:
-        verbose_name = 'Рассылка'
-        verbose_name_plural = 'Рассылки'
+        verbose_name = 'Попытка рассылки'
+        verbose_name_plural = 'Попытки рассылки'
 
 
 class Newsletter(models.Model):
+    PERIOD_CHOICES = {
+        "DISABLE": 'Отключено',
+        "EVERY_DAY": 'Ежедневно',
+        "EVERY_WEEK": 'Еженедельно',
+        "EVERY_MONTH": 'Ежемесячно',
+    }
+
+    STATUS_CHOICES = {
+        "CREATED": 'Создана',
+        "RUNNED": 'Запущена',
+        "COMPLETED": 'Завершена',
+    }
+
     date_time_first_sent = models.DateTimeField(verbose_name="дата и время первой отправки рассылки")
-    period = models.PositiveIntegerField(verbose_name="периодичность", default=0)  # пока так
-    status = models.PositiveIntegerField(verbose_name="статус рассылки", default=0)  # пока так
+    period = models.CharField(max_length=30, verbose_name="периодичность", choices=PERIOD_CHOICES, default="DISABLE")
+    status = models.CharField(max_length=30, verbose_name="статус рассылки", choices=STATUS_CHOICES, default="CREATED")  # пока так
     message = models.ForeignKey(Message, verbose_name="сообщение",
-                                on_delete=models.CASCADE)  # Если сообщение удалено, то рассылка тоже удаляется
-    clients = models.ManyToManyField(Client, verbose_name="клиенты")
+                                on_delete=models.CASCADE,
+                                related_name="newsletters")  # Если сообщение удалено, то рассылка тоже удаляется
+    clients = models.ManyToManyField(Client, verbose_name="клиенты", related_name="newsletters")
 
     def __str__(self):
         return f"Рассылка {self.message.subject} - {self.date_time_first_sent} - {self.status}"
