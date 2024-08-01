@@ -11,19 +11,14 @@
 
             <!-- Modal body -->
             <div class="modal-body">
-                Вы действительно хотите удалить сообщение {{ object.pk }}?
+                Вы действительно хотите удалить сообщение {{ object.subject }}?
             </div>
 
             <!-- Modal footer -->
             <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
-                <form method="post" action="" class="form-floating" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">Delete</button>
-                </form>
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Отмена</button>
+                <a href="{% url 'eservice:message_delete' object.pk %}" class="btn btn-outline-danger">Удалить</a>
             </div>
-
-
         </div>
     </div>
 </div>

@@ -60,21 +60,11 @@ class MessageUpdateView(UpdateView):
     model = Message
     fields = ('subject', 'body')
 
-    def post(self, *args, **kwargs):
-        print("POST22!!!!!")
-
     def get_success_url(self):
         return reverse('eservice:message_detail', args=[self.kwargs.get('pk')])
 
 
-class MessageDeleteView(DeleteView):
-    model = Message
-    success_url = reverse_lazy('eservice:message_list')
-
-
 def message_delete(request, pk):
-    if request.method == 'POST':
-        print("POST!!!!!")
     message = get_object_or_404(Message, pk=pk)
     message.delete()
     return redirect('eservice:message_list')

@@ -1,13 +1,17 @@
 {% extends 'eservice/base.html'%}
 {% load custom_tags %}
 {% block content %}
-<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-    <h1 class="display-4">Автоматизированный сервис рассылок</h1>
-    <p class="lead">{% app_title %} - это отличный вариант хранения ваших плагинов и примеров кода, который вы бы хотели
-        продать</p>
+<div class="row text-center">
+    <a type="button" class="btn btn-outline-primary"
+       href="{% url 'eservice:message_create'%}">
+        Добавить новое сообщение
+    </a>
 </div>
 <div class="row text-center">
     <div class="row text-center">
+        {% if page_obj.paginator.num_pages == 1 and page_obj|length == 0 %}
+        <h2 class="mb-4">Список сообщений пуст</h2>
+        {% else %}
         <h2 class="mb-4">Список внесенных сообщений рассылок</h2>
         {% for message in page_obj %}
         <div class="col-4">
@@ -18,16 +22,16 @@
                 <div class="card-body">
                     <p class="mt-3 mb-4 text-start m-3">{{ message.body|truncatechars:100 }}</p>
                     <div class="btn-group">
-                            <a type="button" class="btn btn-lg btn-outline-primary"
-                               href="{% url 'eservice:message_detail' message.pk %}">Подробнее</a>
-                            <a type="button" class="btn btn-lg btn-outline-danger"
-                               href="{% url 'eservice:message_delete' message.pk %}">Удалить</a>
+                        <a type="button" class="btn btn-outline-primary"
+                           href="{% url 'eservice:message_detail' message.pk %}">Подробнее</a>
                     </div>
                 </div>
             </div>
         </div>
         {% endfor %}
+        {% endif %}
 
+        {% if page_obj.paginator.num_pages > 1 %}
         <div id="pages" align="center">
             {% if page_obj.has_previous %}
             <a href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
@@ -41,6 +45,7 @@
             <a href="?page={{ page_obj.next_page_number }}">Следующая</a>
             {% endif %}
         </div>
+        {% endif %}
     </div>
 </div>
 
