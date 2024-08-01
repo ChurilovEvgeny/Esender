@@ -1,0 +1,29 @@
+{% extends 'eservice/base.html'%}
+{% block content %}
+<div class="row text-start">
+    <div class="col-lg-12 col-md-6 col-sm-12">
+        <div class="card mb-4 box-shadow">
+            <div class="card-header">
+                {% if object %}
+                <h4 class="my-0 font-weight-normal">Форма для добавления нового рассылочного сообщения</h4>
+                {% else %}
+                <h4 class="my-0 font-weight-normal">Форма для обновления рассылочного сообщения</h4>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" action="" class="form-floating" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-lg btn-block btn-outline-primary">
+                        {% if object %}
+                        Обновить
+                        {% else %}
+                        Добавить
+                        {% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock%}
