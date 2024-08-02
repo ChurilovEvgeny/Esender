@@ -1,8 +1,9 @@
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
-from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView
 
-from eservice.models import Message, Client
+from eservice.forms import NewsletterForm
+from eservice.models import Message, Client, Newsletter
 
 
 # Контроллеры для Client
@@ -68,3 +69,45 @@ def message_delete(request, pk):
     message = get_object_or_404(Message, pk=pk)
     message.delete()
     return redirect('eservice:message_list')
+
+
+# Контроллеры для Newsletter
+class NewsletterCreateView(CreateView):
+    model = Newsletter
+    form_class = NewsletterForm
+    success_url = reverse_lazy('eservice:newsletter_list')
+
+
+class NewsletterListView(ListView):
+    model = Newsletter
+    paginate_by = 16
+
+
+class NewsletterDetailView(DetailView):
+    model = Newsletter
+
+    def post(self, *args, **kwargs):
+        message = get_object_or_404(Newsletter, pk=self.kwargs.get('pk'))
+        message.delete()
+        return redirect('eservice:newsletter_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        clients = context["object"].clients.get_queryset()[:100]
+        clients_list = [str(item) for item in clients]
+        context["object"].clients_list = clients_list
+        return context
+
+
+class NewsletterUpdateView(UpdateView):
+    model = Newsletter
+    form_class = NewsletterForm
+
+    def get_success_url(self):
+        return reverse('eservice:newsletter_detail', args=[self.kwargs.get('pk')])
+
+
+def newsletter_delete(request, pk):
+    message = get_object_or_404(Newsletter, pk=pk)
+    message.delete()
+    return redirect('eservice:newsletter_list')
