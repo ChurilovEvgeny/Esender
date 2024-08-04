@@ -77,6 +77,14 @@ class NewsletterCreateView(CreateView):
     form_class = NewsletterForm
     success_url = reverse_lazy('eservice:newsletter_list')
 
+    def form_valid(self, form):
+        if form.is_valid():
+            new_newsletter = form.save()
+            new_newsletter.date_time_next_sent = new_newsletter.date_time_first_sent.replace(second=0, microsecond=0)
+            new_newsletter.refresh_status()
+            new_newsletter.save()
+        return super().form_valid(form)
+
 
 class NewsletterListView(ListView):
     model = Newsletter
@@ -105,6 +113,14 @@ class NewsletterUpdateView(UpdateView):
 
     def get_success_url(self):
         return reverse('eservice:newsletter_detail', args=[self.kwargs.get('pk')])
+
+    def form_valid(self, form):
+        if form.is_valid():
+            new_newsletter = form.save()
+            new_newsletter.date_time_next_sent = new_newsletter.date_time_first_sent.replace(second=0, microsecond=0)
+            new_newsletter.refresh_status()
+            new_newsletter.save()
+        return super().form_valid(form)
 
 
 def newsletter_delete(request, pk):
