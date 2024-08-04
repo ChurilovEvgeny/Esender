@@ -64,7 +64,7 @@ class Newsletter(models.Model):
 
     period = models.CharField(max_length=30, verbose_name="периодичность", choices=PERIOD_CHOICES, default="DISABLE")
     status = models.CharField(max_length=30, verbose_name="статус рассылки", choices=STATUS_CHOICES,
-                              default="CREATED")  # пока так
+                              default=STATUS_CREATED)  # пока так
     message = models.ForeignKey(Message, verbose_name="сообщение",
                                 on_delete=models.CASCADE,
                                 related_name="newsletters")  # Если сообщение удалено, то рассылка тоже удаляется
@@ -82,8 +82,8 @@ class Newsletter(models.Model):
         now_time = timezone.now().replace(second=0, microsecond=0)  # Сбрасываем секунды для корректного сравнения
         print(now_time)
 
-        query = Q(status='CREATED')
-        query.add(Q(status='RUNNED'), Q.OR)
+        query = Q(status=cls.STATUS_CREATED)
+        query.add(Q(status=cls.STATUS_LAUNCHED), Q.OR)
         query.add(Q(date_time_next_sent__lte=now_time), Q.AND)
 
         newsletters = cls.objects.filter(query)
@@ -94,23 +94,32 @@ class Newsletter(models.Model):
         def get_next_day_date(date_time_start_sent, now_time):
             # К дате/времени начала рассылки прибавляются недостающие дни к текущей дате
             # плюс один день на следующую рассылку
-            next_date_time_diff = (now_time - date_time_start_sent).days + 1
-            delta = datetime.timedelta(days=next_date_time_diff)
-            return date_time_start_sent + delta
+            if now_time > date_time_start_sent:
+                next_date_time_diff = (now_time - date_time_start_sent).days + 1
+                delta = datetime.timedelta(days=next_date_time_diff)
+                return date_time_start_sent + delta
+            else:
+                return date_time_start_sent
 
         def get_next_week_date(date_time_start_sent, now_time):
             # К дате/времени начала рассылки прибавляются недостающие дни к текущей дате
             # плюс разница до следующей недели на следующую рассылку
-            now_start_delta = (now_time - date_time_start_sent).days
-            delta = now_start_delta + (7 - now_start_delta % 7)
-            return date_time_start_sent + datetime.timedelta(days=delta)
+            if now_time > date_time_start_sent:
+                now_start_delta = (now_time - date_time_start_sent).days
+                delta = now_start_delta + (7 - now_start_delta % 7)
+                return date_time_start_sent + datetime.timedelta(days=delta)
+            else:
+                return date_time_start_sent
 
         def get_next_month_date(date_time_start_sent, now_time):
             # Библиотечная функция при добавлении к месяцу учитывает количество дней, к примеру
             # дата начала рассылки 31 января, но следующая дата выставится исходя из количества дней в месяце,
             # то есть в феврале будет 28 или 29 февраля, а в апреле будет 30 апреля, но в марте будет 31 марта
-            month_count = relativedelta(now_time, date_time_start_sent).months + 1
-            return date_time_start_sent + relativedelta(months=month_count)
+            if now_time > date_time_start_sent:
+                month_count = relativedelta(now_time, date_time_start_sent).months + 1
+                return date_time_start_sent + relativedelta(months=month_count)
+            else:
+                return date_time_start_sent
 
         date_time_start_sent = self.date_time_first_sent.replace(second=0, microsecond=0)
         now_time = timezone.now().replace(second=0, microsecond=0)

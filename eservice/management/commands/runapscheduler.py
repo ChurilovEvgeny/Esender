@@ -1,19 +1,18 @@
-import asyncio
 import logging
 from smtplib import SMTPAuthenticationError, SMTPException
-from time import sleep
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django_apscheduler import util
 from django_apscheduler.jobstores import DjangoJobStore
 from django_apscheduler.models import DjangoJobExecution
 
 from config.settings import EMAIL_HOST_USER
-from eservice.models import Newsletter
+from eservice.models import Newsletter, AttemptsNewsletter
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +24,8 @@ class EmailThread(threading.Thread):
         self.subject = subject
         self.recipient_list = recipient_list
         self.html_content = html_content
+        self.operation_completed = False
+        self.operation_text = ""
         threading.Thread.__init__(self)
 
     def run(self):
@@ -36,12 +37,13 @@ class EmailThread(threading.Thread):
                 self.recipient_list,
                 fail_silently=False,
             )
+            self.operation_completed = True
         except SMTPAuthenticationError:
-            print('Не удалось авторизоваться на почте')
+            self.operation_text = "Не удалось авторизоваться на почте"
         except SMTPException as e:
-            print('Не удалось отправить сообщение' + str(e))
+            self.operation_text = "SMTPException " + str(e)
         except Exception as e:
-            print('Ошибка отправки сообщения' + str(e))
+            self.operation_text = "Exception " + str(e)
 
 
 def send_mail_async(subject, html_content, recipient_list):
@@ -49,11 +51,36 @@ def send_mail_async(subject, html_content, recipient_list):
 
 
 def send(newsletter: Newsletter):
+    send_time = timezone.now()
+
     clients = newsletter.clients.get_queryset()
+
+    email_threads = []
     for client in clients:
-        # Send email to client using client's email address
-        print(f"Sending email to {client.email}")
-        send_mail_async(newsletter.message.subject, newsletter.message.body, [client.email])
+        email_threads.append(EmailThread(newsletter.message.subject, newsletter.message.body, [client.email]))
+
+    print("Send started")
+    [email_thread.start() for email_thread in email_threads]
+    [email_thread.join() for email_thread in email_threads]
+    print("Send competed")
+
+    res = make_operation_result(email_threads)
+    print(res)
+    return send_time, res[0], res[1]
+    # send_mail_async(newsletter.message.subject, newsletter.message.body, [client.email])
+
+
+def make_operation_result(email_threads: list[EmailThread]) -> tuple[bool, str]:
+    # По тз сказано, что у одной попытки рассылки должна быть одна запись в БД, без привязки к количеству клиентов
+    # Поэтому сделан такой алгоритм
+
+    # Если все в ошибках, то берем сообщение первого
+    is_all_in_error = all([not email_thread.operation_completed for email_thread in email_threads])
+    if is_all_in_error:
+        return False, email_threads[0].operation_text
+    # Если хотя-бы один без ошибки, то записываем успешную отправку
+    else:
+        return True, "OK"
 
 
 def job_every_minute():
@@ -61,10 +88,12 @@ def job_every_minute():
 
     newsletters = Newsletter.get_newsletters_ready_to_sent()
     for newsletter in newsletters:
-        send(newsletter)
+        operation_result = send(newsletter)
 
         newsletter.set_next_sent_datetime()
         newsletter.refresh_status()
+        AttemptsNewsletter.objects.create(newsletter=newsletter, date_time_last_sent=operation_result[0],
+                                          status=operation_result[1], mail_server_response=operation_result[2])
 
 
 # The `close_old_connections` decorator ensures that database connections, that have become

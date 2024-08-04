@@ -80,7 +80,7 @@ class NewsletterCreateView(CreateView):
     def form_valid(self, form):
         if form.is_valid():
             new_newsletter = form.save()
-            new_newsletter.date_time_next_sent = new_newsletter.date_time_first_sent.replace(second=0, microsecond=0)
+            new_newsletter.new_newsletter.set_next_sent_datetime()
             new_newsletter.refresh_status()
             new_newsletter.save()
         return super().form_valid(form)
@@ -117,7 +117,7 @@ class NewsletterUpdateView(UpdateView):
     def form_valid(self, form):
         if form.is_valid():
             new_newsletter = form.save()
-            new_newsletter.date_time_next_sent = new_newsletter.date_time_first_sent.replace(second=0, microsecond=0)
+            new_newsletter.set_next_sent_datetime()
             new_newsletter.refresh_status()
             new_newsletter.save()
         return super().form_valid(form)
