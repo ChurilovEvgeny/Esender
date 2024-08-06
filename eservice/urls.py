@@ -3,7 +3,7 @@ from django.urls import path
 from eservice.apps import EserviceConfig
 from eservice.views import MessageListView, MessageCreateView, MessageUpdateView, MessageDetailView, message_delete, \
     ClientListView, ClientDetailView, ClientCreateView, ClientUpdateView, client_delete, NewsletterListView, \
-    NewsletterCreateView, NewsletterUpdateView, NewsletterDetailView, newsletter_delete
+    NewsletterCreateView, NewsletterUpdateView, NewsletterDetailView, newsletter_delete, AttemptsNewsletterListView
 
 app_name = EserviceConfig.name
 
@@ -26,4 +26,6 @@ urlpatterns = [
     path('newsletter_form/<int:pk>', NewsletterUpdateView.as_view(), name='newsletter_update'),
     path('newsletter_detail/<int:pk>', NewsletterDetailView.as_view(), name='newsletter_detail'),
     path('newsletter_delete/<int:pk>', newsletter_delete, name='newsletter_delete'),
+
+    path('attempts_newsletter_list', AttemptsNewsletterListView.as_view(), name='attempts_newsletter_list'),
 ]

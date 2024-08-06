@@ -5,25 +5,27 @@ from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
-NULLABLE = {'blank': True, 'null': True}
+NULLABLE = {"blank": True, "null": True}
 
 
 class Client(models.Model):
     """Модель клиента, содержит поля: имя, email, комментарий."""
-    name = models.CharField(max_length=255, verbose_name='Ф. И. О.')
-    email = models.EmailField(verbose_name='Email')
-    comment = models.TextField(verbose_name='Комментарий', **NULLABLE)
+
+    name = models.CharField(max_length=255, verbose_name="Ф. И. О.")
+    email = models.EmailField(verbose_name="Email")
+    comment = models.TextField(verbose_name="Комментарий", **NULLABLE)
 
     def __str__(self):
         return f"{self.name} - {self.email}"
 
     class Meta:
-        verbose_name = 'Клиент'
-        verbose_name_plural = 'Клиенты'
+        verbose_name = "Клиент"
+        verbose_name_plural = "Клиенты"
 
 
 class Message(models.Model):
     """Модель сообщения, содержит поля: тема, тело"""
+
     subject = models.CharField(max_length=100, verbose_name="тема", **NULLABLE)
     body = models.TextField(**NULLABLE, verbose_name="тело")
 
@@ -31,8 +33,8 @@ class Message(models.Model):
         return f"{self.subject}"
 
     class Meta:
-        verbose_name = 'Сообщение'
-        verbose_name_plural = 'Сообщения'
+        verbose_name = "Сообщение"
+        verbose_name_plural = "Сообщения"
 
 
 class Newsletter(models.Model):
@@ -46,32 +48,51 @@ class Newsletter(models.Model):
     STATUS_COMPLETED = "COMPLETED"
 
     PERIOD_CHOICES = {
-        PERIOD_DISABLE: 'Отключено',
-        PERIOD_EVERY_DAY: 'Ежедневно',
-        PERIOD_EVERY_WEEK: 'Еженедельно',
-        PERIOD_EVERY_MONTH: 'Ежемесячно',
+        PERIOD_DISABLE: "Отключено",
+        PERIOD_EVERY_DAY: "Ежедневно",
+        PERIOD_EVERY_WEEK: "Еженедельно",
+        PERIOD_EVERY_MONTH: "Ежемесячно",
     }
 
     STATUS_CHOICES = {
-        STATUS_CREATED: 'Создана',
-        STATUS_LAUNCHED: 'Запущена',
-        STATUS_COMPLETED: 'Завершена',
+        STATUS_CREATED: "Создана",
+        STATUS_LAUNCHED: "Запущена",
+        STATUS_COMPLETED: "Завершена",
     }
 
-    date_time_first_sent = models.DateTimeField(verbose_name="дата и время первой отправки рассылки")
-    date_time_last_sent = models.DateTimeField(verbose_name="дата и время последней отправки рассылки", blank=True,
-                                               null=True)
+    date_time_first_sent = models.DateTimeField(
+        verbose_name="дата и время первой отправки рассылки"
+    )
+    date_time_last_sent = models.DateTimeField(
+        verbose_name="дата и время последней отправки рассылки", blank=True, null=True
+    )
 
-    period = models.CharField(max_length=30, verbose_name="периодичность", choices=PERIOD_CHOICES, default="DISABLE")
-    status = models.CharField(max_length=30, verbose_name="статус рассылки", choices=STATUS_CHOICES,
-                              default=STATUS_CREATED)  # пока так
-    message = models.ForeignKey(Message, verbose_name="сообщение",
-                                on_delete=models.CASCADE,
-                                related_name="newsletters")  # Если сообщение удалено, то рассылка тоже удаляется
-    clients = models.ManyToManyField(Client, verbose_name="клиенты", related_name="newsletters")
+    period = models.CharField(
+        max_length=30,
+        verbose_name="периодичность",
+        choices=PERIOD_CHOICES,
+        default="DISABLE",
+    )
+    status = models.CharField(
+        max_length=30,
+        verbose_name="статус рассылки",
+        choices=STATUS_CHOICES,
+        default=STATUS_CREATED,
+    )  # пока так
+    message = models.ForeignKey(
+        Message,
+        verbose_name="сообщение",
+        on_delete=models.CASCADE,
+        related_name="newsletters",
+    )  # Если сообщение удалено, то рассылка тоже удаляется
+    clients = models.ManyToManyField(
+        Client, verbose_name="клиенты", related_name="newsletters"
+    )
 
     # заполняется программно в алгоритме, по умолчанию date_time_first_sent
-    date_time_next_sent = models.DateTimeField(verbose_name="дата и время следующей рассылки", blank=True, null=True)
+    date_time_next_sent = models.DateTimeField(
+        verbose_name="дата и время следующей рассылки", blank=True, null=True
+    )
 
     @classmethod
     def get_newsletters_ready_to_sent(cls) -> QuerySet:
@@ -79,7 +100,9 @@ class Newsletter(models.Model):
         # Если создана или запущена и если текущая дата/время больше или равно
         # дате/времени следующей рассылки, то выбрать
         # Следует использовать timezone.now(), а не datetime.now(), так как django ругается
-        now_time = timezone.now().replace(second=0, microsecond=0)  # Сбрасываем секунды для корректного сравнения
+        now_time = timezone.now().replace(
+            second=0, microsecond=0
+        )  # Сбрасываем секунды для корректного сравнения
         print(now_time)
 
         query = Q(status=cls.STATUS_CREATED)
@@ -121,7 +144,9 @@ class Newsletter(models.Model):
             else:
                 return date_time_start_sent
 
-        date_time_start_sent = self.date_time_first_sent.replace(second=0, microsecond=0)
+        date_time_start_sent = self.date_time_first_sent.replace(
+            second=0, microsecond=0
+        )
         now_time = timezone.now().replace(second=0, microsecond=0)
 
         match self.period:
@@ -131,19 +156,27 @@ class Newsletter(models.Model):
                 self.date_time_next_sent = now_time + delta
 
             case self.PERIOD_EVERY_WEEK:
-                self.date_time_next_sent = get_next_week_date(date_time_start_sent, now_time)
+                self.date_time_next_sent = get_next_week_date(
+                    date_time_start_sent, now_time
+                )
 
             case self.PERIOD_EVERY_MONTH:
-                self.date_time_next_sent = get_next_month_date(date_time_start_sent, now_time)
+                self.date_time_next_sent = get_next_month_date(
+                    date_time_start_sent, now_time
+                )
 
             case _:
                 pass
 
-        self.date_time_next_sent = self.date_time_next_sent.replace(second=0, microsecond=0)
+        self.date_time_next_sent = self.date_time_next_sent.replace(
+            second=0, microsecond=0
+        )
         self.save()
 
     def refresh_status(self):
-        new_status = self.make_status(self.date_time_first_sent, self.date_time_last_sent)
+        new_status = self.make_status(
+            self.date_time_first_sent, self.date_time_last_sent
+        )
         if self.status != new_status:
             self.status = new_status
             self.save()
@@ -166,22 +199,32 @@ class Newsletter(models.Model):
         return f"Рассылка {self.message.subject}; Начало: {self.date_time_first_sent}; Окончание: {self.date_time_last_sent}; След.: {self.date_time_next_sent}; {self.period}; {self.status}"
 
     class Meta:
-        verbose_name = 'Рассылка'
-        verbose_name_plural = 'Рассылки'
+        verbose_name = "Рассылка"
+        verbose_name_plural = "Рассылки"
 
 
 class AttemptsNewsletter(models.Model):
     """Модель рассылки, содержит поля: дата и время последней попытки, статус попытки, ответ почтового сервера."""
-    newsletter = models.ForeignKey(Newsletter, verbose_name="рассылка",
-                                   on_delete=models.CASCADE,
-                                   related_name="attempts_newsletter", blank=True, null=True)
-    date_time_last_sent = models.DateTimeField(verbose_name="дата и время последней попытки")
+
+    newsletter = models.ForeignKey(
+        Newsletter,
+        verbose_name="рассылка",
+        on_delete=models.CASCADE,
+        related_name="attempts_newsletter",
+        blank=True,
+        null=True,
+    )
+    date_time_last_sent = models.DateTimeField(
+        verbose_name="дата и время последней попытки"
+    )
     status = models.BooleanField(default=False, verbose_name="статус попытки")
-    mail_server_response = models.TextField(verbose_name="ответ почтового сервера", **NULLABLE)
+    mail_server_response = models.TextField(
+        verbose_name="ответ почтового сервера", **NULLABLE
+    )
 
     def __str__(self):
         return f"Рассылка: {self.newsletter}; {self.date_time_last_sent}; {self.status}"
 
     class Meta:
-        verbose_name = 'Попытка рассылки'
-        verbose_name_plural = 'Попытки рассылки'
+        verbose_name = "Попытка рассылки"
+        verbose_name_plural = "Попытки рассылки"

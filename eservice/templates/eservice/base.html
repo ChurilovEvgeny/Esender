@@ -11,12 +11,14 @@
 
 
 <div class="container">
-    {% include 'eservice/includes/inc_header.html'%}
+    <div class="row">
+        {% include 'eservice/includes/inc_header.html'%}
 
-    {% block content %}
-    {% endblock %}
+        {% block content %}
+        {% endblock %}
 
-    {% include 'eservice/includes/inc_footer.html' %}
+        {% include 'eservice/includes/inc_footer.html' %}
+    </div>
 </div>
 
 <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>

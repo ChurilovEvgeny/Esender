@@ -3,7 +3,7 @@ from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 
 from eservice.forms import NewsletterForm
-from eservice.models import Message, Client, Newsletter
+from eservice.models import Message, Client, Newsletter, AttemptsNewsletter
 
 
 # Контроллеры для Client
@@ -127,3 +127,8 @@ def newsletter_delete(request, pk):
     message = get_object_or_404(Newsletter, pk=pk)
     message.delete()
     return redirect('eservice:newsletter_list')
+
+
+class AttemptsNewsletterListView(ListView):
+    model = AttemptsNewsletter
+    paginate_by = 10
