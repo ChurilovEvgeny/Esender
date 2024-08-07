@@ -7,6 +7,7 @@ from django.template import loader
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 
+from blog.models import Blog
 from eservice.forms import NewsletterForm, NewsletterModeratorForm
 from eservice.models import Message, Client, Newsletter, AttemptsNewsletter
 
@@ -208,10 +209,10 @@ class AttemptsNewsletterListView(ListViewOwnerItems):
 
 def index(request):
     context = {}
-    context['total_newsletter_count'] = 0
-    context['active_newsletter_count'] = 0
-    context['unique_clients_count'] = 0
-    context['blogs'] = []
+    context['total_newsletter_count'] = Newsletter.get_total_newsletters()
+    context['active_newsletter_count'] = Newsletter.get_total_active_newsletters()
+    context['unique_clients_count'] = Client.get_unique_clients_count()
+    context['blogs'] = Blog.get_3_random_blogs()
     template = loader.get_template('eservice/index.html')
     context = {
         'context': context,

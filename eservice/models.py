@@ -32,13 +32,16 @@ class Client(models.Model):
         **NULLABLE
     )
 
+    @classmethod
+    def get_unique_clients_count(cls):
+        return cls.objects.all().distinct("email").count()
+
     def __str__(self):
         return f"{self.name} - {self.email}"
 
     class Meta(MetaManagerPermissionsMixin):
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
-
 
 
 class Message(models.Model):
@@ -190,23 +193,26 @@ class Newsletter(models.Model):
                 # self.date_time_next_sent = get_next_day_date(date_time_start_sent, now_time)
                 delta = timezone.timedelta(minutes=2)
                 self.date_time_next_sent = now_time + delta
+                self.date_time_next_sent = self.date_time_next_sent.replace(
+                    second=0, microsecond=0)
 
             case self.PERIOD_EVERY_WEEK:
                 self.date_time_next_sent = get_next_week_date(
                     date_time_start_sent, now_time
                 )
+                self.date_time_next_sent = self.date_time_next_sent.replace(
+                    second=0, microsecond=0)
 
             case self.PERIOD_EVERY_MONTH:
                 self.date_time_next_sent = get_next_month_date(
                     date_time_start_sent, now_time
                 )
+                self.date_time_next_sent = self.date_time_next_sent.replace(
+                    second=0, microsecond=0)
 
             case _:
                 pass
 
-        self.date_time_next_sent = self.date_time_next_sent.replace(
-            second=0, microsecond=0
-        )
         self.save()
 
     def refresh_status(self):
@@ -230,6 +236,14 @@ class Newsletter(models.Model):
             return cls.STATUS_LAUNCHED
 
         return cls.STATUS_CREATED
+
+    @classmethod
+    def get_total_newsletters(cls):
+        return cls.objects.all().count()
+
+    @classmethod
+    def get_total_active_newsletters(cls):
+        return cls.objects.filter(status=cls.STATUS_LAUNCHED).count()
 
     def __str__(self):
         return f"Рассылка {self.message.subject}; Начало: {self.date_time_first_sent}; Окончание: {self.date_time_last_sent}; След.: {self.date_time_next_sent}; {self.period}; {self.status}"
