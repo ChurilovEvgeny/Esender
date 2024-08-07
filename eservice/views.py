@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.template import loader
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
@@ -10,75 +10,42 @@ from django.views.generic import ListView, CreateView, DetailView, UpdateView
 from blog.models import Blog
 from eservice.forms import NewsletterForm, NewsletterModeratorForm
 from eservice.models import Message, Client, Newsletter, AttemptsNewsletter
-
-
-def has_view_all_list_perms(current_user):
-    """Получать весь список объектов может супер или менеджер"""
-    return current_user.is_superuser or current_user.has_perm('eservice.manager')
-
-
-def has_update_perms(current_user, object_owner):
-    return current_user.is_superuser or current_user == object_owner
-
-
-def has_delete_perms(current_user, object_owner):
-    """Непосредственно перед удалением объекта дополнительная проверка на валидного пользователя"""
-    return current_user.is_superuser or current_user == object_owner
-
-
-class CreateViewWithAutoOwner(LoginRequiredMixin, CreateView):
-    login_url = reverse_lazy('users:login')
-
-    def __fill_owner(self, form):
-        """Функция добавляет значение в поле owner"""
-        form_obj = form.save()
-        user = self.request.user
-        form_obj.owner = user
-        form_obj.save()
-
-    def form_valid(self, form):
-        self.__fill_owner(form)
-        return super().form_valid(form)
-
-
-class ListViewOwnerItems(LoginRequiredMixin, ListView):
-    login_url = reverse_lazy('users:login')
-
-    def get_queryset(self):
-        user = self.request.user
-        # Если текущий пользователь супер или же менеджер, то возвращаем весь список
-        if has_view_all_list_perms(user):
-            return super().get_queryset()
-        return self.model.objects.filter(owner=user)
-
-
-class DetailViewAccessControl(DetailView):
-    def get_object(self, queryset=None):
-        if has_view_all_list_perms(self.request.user):
-            return super().get_object(queryset)
-        return get_object_or_404(self.model, owner=self.request.user)
+from eservice.views_services import AutoOwnerMixin, delete, ObjectsListAccessMixin, ObjectDetailAccessMixin, \
+    is_super_or_owner, CustomLoginRequiredMixin
 
 
 # Контроллеры для Client
-class ClientCreateView(CreateViewWithAutoOwner):
+class ClientCreateView(LoginRequiredMixin, AutoOwnerMixin, CreateView):
     model = Client
     fields = ('name', 'email', 'comment',)
     success_url = reverse_lazy('eservice:client_list')
+    login_url = reverse_lazy('users:login')
 
 
-class ClientListView(ListViewOwnerItems):
+class ClientListView(LoginRequiredMixin, ObjectsListAccessMixin, ListView):
     model = Client
     paginate_by = 8
+    login_url = reverse_lazy('users:login')
 
 
-class ClientDetailView(DetailViewAccessControl):
+class ClientDetailView(ObjectDetailAccessMixin, DetailView):
     model = Client
 
 
-class ClientUpdateView(LoginRequiredMixin, UpdateView):
+class ClientUpdateView(CustomLoginRequiredMixin, UpdateView):
     model = Client
     fields = ('name', 'email', 'comment',)
     login_url = reverse_lazy('users:login')
+
+    def form_valid(self, form):
+        if form.is_valid():
+            new_client = form.save()
+            if is_super_or_owner(self.request.user, new_client.owner):
+                new_client.save()
+            else:
+                return redirect('users:login')
+
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('eservice:client_detail', args=[self.kwargs.get('pk')])
@@ -86,32 +53,40 @@ class ClientUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required(login_url=reverse_lazy('users:login'))
 def client_delete(request, pk):
-    client = get_object_or_404(Client, pk=pk)
-    if has_delete_perms(request.user, client.owner):
-        client.delete()
-    return redirect('eservice:client_list')
+    return delete(request, pk)
 
 
 # Контроллеры для Message
-class MessageCreateView(CreateViewWithAutoOwner):
+class MessageCreateView(LoginRequiredMixin, AutoOwnerMixin, CreateView):
     model = Message
     fields = ('subject', 'body')
     success_url = reverse_lazy('eservice:message_list')
+    login_url = reverse_lazy('users:login')
 
 
-class MessageListView(ListViewOwnerItems):
+class MessageListView(LoginRequiredMixin, ObjectsListAccessMixin, ListView):
     model = Message
     paginate_by = 6
+    login_url = reverse_lazy('users:login')
 
 
-class MessageDetailView(DetailViewAccessControl):
+class MessageDetailView(ObjectDetailAccessMixin, DetailView):
     model = Message
 
 
-class MessageUpdateView(LoginRequiredMixin, UpdateView):
+class MessageUpdateView(CustomLoginRequiredMixin, UpdateView):
     model = Message
     fields = ('subject', 'body')
-    login_url = reverse_lazy('users:login')
+
+    def form_valid(self, form):
+        if form.is_valid():
+            new_message = form.save()
+            if is_super_or_owner(self.request.user, new_message.owner):
+                new_message.save()
+            else:
+                raise PermissionDenied
+
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('eservice:message_detail', args=[self.kwargs.get('pk')])
@@ -119,17 +94,15 @@ class MessageUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required(login_url=reverse_lazy('users:login'))
 def message_delete(request, pk):
-    message = get_object_or_404(Message, pk=pk)
-    if has_delete_perms(request.user, message.owner):
-        message.delete()
-    return redirect('eservice:message_list')
+    return delete(request, pk)
 
 
 # Контроллеры для Newsletter
-class NewsletterCreateView(CreateViewWithAutoOwner):
+class NewsletterCreateView(LoginRequiredMixin, AutoOwnerMixin, CreateView):
     model = Newsletter
     form_class = NewsletterForm
     success_url = reverse_lazy('eservice:newsletter_list')
+    login_url = reverse_lazy('users:login')
 
     def form_valid(self, form):
         if form.is_valid():
@@ -140,12 +113,13 @@ class NewsletterCreateView(CreateViewWithAutoOwner):
         return super().form_valid(form)
 
 
-class NewsletterListView(ListViewOwnerItems):
+class NewsletterListView(LoginRequiredMixin, ObjectsListAccessMixin, ListView):
     model = Newsletter
     paginate_by = 16
+    login_url = reverse_lazy('users:login')
 
 
-class NewsletterDetailView(DetailView):
+class NewsletterDetailView(ObjectDetailAccessMixin, DetailView):
     model = Newsletter
 
     def get_context_data(self, **kwargs):
@@ -177,7 +151,7 @@ class NewsletterUpdateView(LoginRequiredMixin, UpdateView):
         if form.is_valid():
             new_newsletter = form.save()
             if type(form) is NewsletterForm:
-                if self.request.user.is_superuser or self.request.user == new_newsletter.owner:
+                if is_super_or_owner(self.request.user, new_newsletter.owner):
                     new_newsletter.set_next_sent_datetime()
                     new_newsletter.refresh_status()
                     new_newsletter.save()
@@ -196,15 +170,13 @@ class NewsletterUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required(login_url=reverse_lazy('users:login'))
 def newsletter_delete(request, pk):
-    newsletter = get_object_or_404(Newsletter, pk=pk)
-    if has_delete_perms(request.user, newsletter.owner):
-        newsletter.delete()
-    return redirect('eservice:newsletter_list')
+    return delete(request, pk)
 
 
-class AttemptsNewsletterListView(ListViewOwnerItems):
+class AttemptsNewsletterListView(LoginRequiredMixin, ObjectsListAccessMixin, ListView):
     model = AttemptsNewsletter
     paginate_by = 10
+    login_url = reverse_lazy('users:login')
 
 
 def index(request):
