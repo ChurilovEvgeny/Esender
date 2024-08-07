@@ -4,7 +4,10 @@
 
 <div class="row text-center">
     <div class="row text-center">
-        <h2 class="mb-4">Главная страница</h2>
+        <h2 class="mb-4">Сейчас у нас!</h2>
+        <h4 class="mb-4">Всего рассылок: {{ context.total_newsletter_count }}</h4>
+        <h4 class="mb-4">Активных рассылок: {{ context.active_newsletter_count }}</h4>
+        <h4 class="mb-4">Уникальных клиентов: {{ context.unique_clients_count }}</h4>
     </div>
 </div>
 

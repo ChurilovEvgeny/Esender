@@ -1,7 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.shortcuts import redirect, get_object_or_404
+from django.template import loader
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 
@@ -202,3 +204,16 @@ def newsletter_delete(request, pk):
 class AttemptsNewsletterListView(ListViewOwnerItems):
     model = AttemptsNewsletter
     paginate_by = 10
+
+
+def index(request):
+    context = {}
+    context['total_newsletter_count'] = 0
+    context['active_newsletter_count'] = 0
+    context['unique_clients_count'] = 0
+    context['blogs'] = []
+    template = loader.get_template('eservice/index.html')
+    context = {
+        'context': context,
+    }
+    return HttpResponse(template.render(context, request))

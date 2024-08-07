@@ -4,12 +4,13 @@ from django.views.generic import TemplateView
 from eservice.apps import EserviceConfig
 from eservice.views import MessageListView, MessageCreateView, MessageUpdateView, MessageDetailView, message_delete, \
     ClientListView, ClientDetailView, ClientCreateView, ClientUpdateView, client_delete, NewsletterListView, \
-    NewsletterCreateView, NewsletterUpdateView, NewsletterDetailView, newsletter_delete, AttemptsNewsletterListView
+    NewsletterCreateView, NewsletterUpdateView, NewsletterDetailView, newsletter_delete, AttemptsNewsletterListView, \
+    index
 
 app_name = EserviceConfig.name
 
 urlpatterns = [
-    path('', TemplateView.as_view(template_name="eservice/index.html"), name='index'),
+    path('', index, name='index'),
 
     path('message_list', MessageListView.as_view(), name='message_list'),
     path('message_create/', MessageCreateView.as_view(), name='message_create'),

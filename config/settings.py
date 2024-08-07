@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 
     'eservice',
     'users',
+    'blog',
 ]
 
 MIDDLEWARE = [
