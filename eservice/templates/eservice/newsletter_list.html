@@ -18,6 +18,11 @@
         {% for obj in page_obj %}
         <div class="col-3">
             <div class="card mb-4 box-shadow d-flex align-items-stretch">
+                {% if user.is_authenticated and perms.eservice.manager or user.is_superuser %}
+                <div class="card-header">
+                    <h6 class="my-0 font-weight-italic">Владелец: {{ obj.owner }}</h6>
+                </div>
+                {% endif %}
                 <div class="card-header">
                     <h4 class="my-0 font-weight-normal">{{ obj.message }}</h4>
                 </div>

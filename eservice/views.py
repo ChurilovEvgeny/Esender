@@ -1,27 +1,74 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
 
-from eservice.forms import NewsletterForm
+from eservice.forms import NewsletterForm, NewsletterModeratorForm
 from eservice.models import Message, Client, Newsletter, AttemptsNewsletter
 
 
+def has_view_all_list_perms(current_user):
+    """Получать весь список объектов может супер или менеджер"""
+    return current_user.is_superuser or current_user.has_perm('eservice.manager')
+
+
+def has_update_perms(current_user, object_owner):
+    return current_user.is_superuser or current_user == object_owner
+
+
+def has_delete_perms(current_user, object_owner):
+    """Непосредственно перед удалением объекта дополнительная проверка на валидного пользователя"""
+    return current_user.is_superuser or current_user == object_owner
+
+
+class CreateViewWithAutoOwner(LoginRequiredMixin, CreateView):
+    login_url = reverse_lazy('users:login')
+
+    def __fill_owner(self, form):
+        """Функция добавляет значение в поле owner"""
+        form_obj = form.save()
+        user = self.request.user
+        form_obj.owner = user
+        form_obj.save()
+
+    def form_valid(self, form):
+        self.__fill_owner(form)
+        return super().form_valid(form)
+
+
+class ListViewOwnerItems(LoginRequiredMixin, ListView):
+    login_url = reverse_lazy('users:login')
+
+    def get_queryset(self):
+        user = self.request.user
+        # Если текущий пользователь супер или же менеджер, то возвращаем весь список
+        if has_view_all_list_perms(user):
+            return super().get_queryset()
+        return self.model.objects.filter(owner=user)
+
+
+class DetailViewAccessControl(DetailView):
+    def get_object(self, queryset=None):
+        if has_view_all_list_perms(self.request.user):
+            return super().get_object(queryset)
+        return get_object_or_404(self.model, owner=self.request.user)
+
+
 # Контроллеры для Client
-class ClientCreateView(LoginRequiredMixin, CreateView):
+class ClientCreateView(CreateViewWithAutoOwner):
     model = Client
     fields = ('name', 'email', 'comment',)
     success_url = reverse_lazy('eservice:client_list')
-    login_url = reverse_lazy('users:login')
 
 
-class ClientListView(ListView):
+class ClientListView(ListViewOwnerItems):
     model = Client
     paginate_by = 8
 
 
-class ClientDetailView(DetailView):
+class ClientDetailView(DetailViewAccessControl):
     model = Client
 
 
@@ -37,30 +84,25 @@ class ClientUpdateView(LoginRequiredMixin, UpdateView):
 @login_required(login_url=reverse_lazy('users:login'))
 def client_delete(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    client.delete()
+    if has_delete_perms(request.user, client.owner):
+        client.delete()
     return redirect('eservice:client_list')
 
 
 # Контроллеры для Message
-class MessageCreateView(LoginRequiredMixin, CreateView):
+class MessageCreateView(CreateViewWithAutoOwner):
     model = Message
     fields = ('subject', 'body')
     success_url = reverse_lazy('eservice:message_list')
-    login_url = reverse_lazy('users:login')
 
 
-class MessageListView(ListView):
+class MessageListView(ListViewOwnerItems):
     model = Message
     paginate_by = 6
 
 
-class MessageDetailView(DetailView):
+class MessageDetailView(DetailViewAccessControl):
     model = Message
-
-    def post(self, *args, **kwargs):
-        message = get_object_or_404(Message, pk=self.kwargs.get('pk'))
-        message.delete()
-        return redirect('eservice:message_list')
 
 
 class MessageUpdateView(LoginRequiredMixin, UpdateView):
@@ -75,16 +117,16 @@ class MessageUpdateView(LoginRequiredMixin, UpdateView):
 @login_required(login_url=reverse_lazy('users:login'))
 def message_delete(request, pk):
     message = get_object_or_404(Message, pk=pk)
-    message.delete()
+    if has_delete_perms(request.user, message.owner):
+        message.delete()
     return redirect('eservice:message_list')
 
 
 # Контроллеры для Newsletter
-class NewsletterCreateView(LoginRequiredMixin, CreateView):
+class NewsletterCreateView(CreateViewWithAutoOwner):
     model = Newsletter
     form_class = NewsletterForm
     success_url = reverse_lazy('eservice:newsletter_list')
-    login_url = reverse_lazy('users:login')
 
     def form_valid(self, form):
         if form.is_valid():
@@ -95,18 +137,13 @@ class NewsletterCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class NewsletterListView(ListView):
+class NewsletterListView(ListViewOwnerItems):
     model = Newsletter
     paginate_by = 16
 
 
 class NewsletterDetailView(DetailView):
     model = Newsletter
-
-    def post(self, *args, **kwargs):
-        message = get_object_or_404(Newsletter, pk=self.kwargs.get('pk'))
-        message.delete()
-        return redirect('eservice:newsletter_list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -121,25 +158,47 @@ class NewsletterUpdateView(LoginRequiredMixin, UpdateView):
     form_class = NewsletterForm
     login_url = reverse_lazy('users:login')
 
+    def get_form_class(self):
+        user = self.request.user
+        if user.is_superuser or user == self.object.owner:
+            return NewsletterForm
+        elif user.has_perm("eservice.manager"):
+            return NewsletterModeratorForm
+
+        raise PermissionDenied
+
     def get_success_url(self):
         return reverse('eservice:newsletter_detail', args=[self.kwargs.get('pk')])
 
     def form_valid(self, form):
         if form.is_valid():
             new_newsletter = form.save()
-            new_newsletter.set_next_sent_datetime()
-            new_newsletter.refresh_status()
-            new_newsletter.save()
+            if type(form) is NewsletterForm:
+                if self.request.user.is_superuser or self.request.user == new_newsletter.owner:
+                    new_newsletter.set_next_sent_datetime()
+                    new_newsletter.refresh_status()
+                    new_newsletter.save()
+                else:
+                    raise PermissionDenied
+            elif type(form) is NewsletterModeratorForm:
+                if self.request.user.has_perm('eservice.manager'):
+                    new_newsletter.save()
+                else:
+                    raise PermissionDenied
+            else:
+                raise PermissionDenied
+
         return super().form_valid(form)
 
 
 @login_required(login_url=reverse_lazy('users:login'))
 def newsletter_delete(request, pk):
-    message = get_object_or_404(Newsletter, pk=pk)
-    message.delete()
+    newsletter = get_object_or_404(Newsletter, pk=pk)
+    if has_delete_perms(request.user, newsletter.owner):
+        newsletter.delete()
     return redirect('eservice:newsletter_list')
 
 
-class AttemptsNewsletterListView(ListView):
+class AttemptsNewsletterListView(ListViewOwnerItems):
     model = AttemptsNewsletter
     paginate_by = 10

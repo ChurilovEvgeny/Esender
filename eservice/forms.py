@@ -7,7 +7,7 @@ class NewsletterForm(forms.ModelForm):
     class Meta:
         model = Newsletter
         fields = '__all__'
-        exclude = ('status', 'date_time_next_sent',)
+        exclude = ('status', 'date_time_next_sent', 'owner')
 
         widgets = {
             'date_time_first_sent': forms.TextInput(attrs={'type': 'datetime-local'}),
@@ -19,3 +19,8 @@ class NewsletterForm(forms.ModelForm):
         if cleaned_data and cleaned_data < self.cleaned_data.get('date_time_first_sent'):
             raise forms.ValidationError("Дата последнего отправления не может быть раньше даты первого отправления")
         return cleaned_data
+
+class NewsletterModeratorForm(forms.ModelForm):
+    class Meta:
+        model = Newsletter
+        fields = ('period', )

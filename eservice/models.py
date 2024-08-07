@@ -5,7 +5,15 @@ from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
+from users.models import User
+
 NULLABLE = {"blank": True, "null": True}
+
+
+class MetaManagerPermissionsMixin:
+    permissions = [
+        ("manager", "Доступ менеджера"),
+    ]
 
 
 class Client(models.Model):
@@ -15,12 +23,22 @@ class Client(models.Model):
     email = models.EmailField(verbose_name="Email")
     comment = models.TextField(verbose_name="Комментарий", **NULLABLE)
 
+    owner = models.ForeignKey(
+        User,
+        verbose_name="Владелец",
+        help_text="Укажите владельца товара",
+        on_delete=models.CASCADE,
+        related_name="Clients",
+        **NULLABLE
+    )
+
     def __str__(self):
         return f"{self.name} - {self.email}"
 
-    class Meta:
+    class Meta(MetaManagerPermissionsMixin):
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
+
 
 
 class Message(models.Model):
@@ -29,10 +47,19 @@ class Message(models.Model):
     subject = models.CharField(max_length=100, verbose_name="тема", **NULLABLE)
     body = models.TextField(**NULLABLE, verbose_name="тело")
 
+    owner = models.ForeignKey(
+        User,
+        verbose_name="Владелец",
+        help_text="Укажите владельца товара",
+        on_delete=models.CASCADE,
+        related_name="Messages",
+        **NULLABLE
+    )
+
     def __str__(self):
         return f"{self.subject}"
 
-    class Meta:
+    class Meta(MetaManagerPermissionsMixin):
         verbose_name = "Сообщение"
         verbose_name_plural = "Сообщения"
 
@@ -92,6 +119,15 @@ class Newsletter(models.Model):
     # заполняется программно в алгоритме, по умолчанию date_time_first_sent
     date_time_next_sent = models.DateTimeField(
         verbose_name="дата и время следующей рассылки", blank=True, null=True
+    )
+
+    owner = models.ForeignKey(
+        User,
+        verbose_name="Владелец",
+        help_text="Укажите владельца товара",
+        on_delete=models.CASCADE,
+        related_name="Newsletters",
+        **NULLABLE
     )
 
     @classmethod
@@ -198,7 +234,7 @@ class Newsletter(models.Model):
     def __str__(self):
         return f"Рассылка {self.message.subject}; Начало: {self.date_time_first_sent}; Окончание: {self.date_time_last_sent}; След.: {self.date_time_next_sent}; {self.period}; {self.status}"
 
-    class Meta:
+    class Meta(MetaManagerPermissionsMixin):
         verbose_name = "Рассылка"
         verbose_name_plural = "Рассылки"
 
@@ -222,9 +258,18 @@ class AttemptsNewsletter(models.Model):
         verbose_name="ответ почтового сервера", **NULLABLE
     )
 
+    owner = models.ForeignKey(
+        User,
+        verbose_name="Владелец",
+        help_text="Укажите владельца товара",
+        on_delete=models.CASCADE,
+        related_name="AttemptsNewsletters",
+        **NULLABLE
+    )
+
     def __str__(self):
         return f"Рассылка: {self.newsletter}; {self.date_time_last_sent}; {self.status}"
 
-    class Meta:
+    class Meta(MetaManagerPermissionsMixin):
         verbose_name = "Попытка рассылки"
         verbose_name_plural = "Попытки рассылки"

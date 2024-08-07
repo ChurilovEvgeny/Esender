@@ -30,12 +30,14 @@
                     </tbody>
                 </table>
 
-                {% if user.is_authenticated %}
+                {% if user.is_authenticated and user == object.owner or user.is_superuser or perms.eservice.manager %}
                 <div class="btn-group">
                     <a type="button" class="btn btn-outline-primary"
                        href="{% url 'eservice:newsletter_update' object.pk %}">
                         Редактировать
                     </a>
+                {% endif %}
+                {% if user.is_authenticated and user == object.owner or user.is_superuser %}
                     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
                             data-bs-target="#myModal">
                         Удалить

@@ -24,7 +24,8 @@ def job_every_minute():
             newsletter=newsletter,
             date_time_last_sent=operation_result[0],
             status=operation_result[1],
-            mail_server_response=operation_result[2]
+            mail_server_response=operation_result[2],
+            owner=newsletter.owner
         )
 
 
@@ -80,3 +81,5 @@ def run_application_scheduler():
     #                   replace_existing=True,
     #                   )
     scheduler.start()
+
+

@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import TemplateView
 
 from eservice.apps import EserviceConfig
 from eservice.views import MessageListView, MessageCreateView, MessageUpdateView, MessageDetailView, message_delete, \
@@ -8,7 +9,9 @@ from eservice.views import MessageListView, MessageCreateView, MessageUpdateView
 app_name = EserviceConfig.name
 
 urlpatterns = [
-    path('', MessageListView.as_view(), name='message_list'),
+    path('', TemplateView.as_view(template_name="eservice/index.html"), name='index'),
+
+    path('message_list', MessageListView.as_view(), name='message_list'),
     path('message_create/', MessageCreateView.as_view(), name='message_create'),
     path('message_form/', MessageCreateView.as_view(), name='message_create'),
     path('message_form/<int:pk>', MessageUpdateView.as_view(), name='message_update'),
