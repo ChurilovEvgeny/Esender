@@ -1,3 +1,5 @@
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.views.generic import ListView, CreateView, DetailView, UpdateView
@@ -7,10 +9,11 @@ from eservice.models import Message, Client, Newsletter, AttemptsNewsletter
 
 
 # Контроллеры для Client
-class ClientCreateView(CreateView):
+class ClientCreateView(LoginRequiredMixin, CreateView):
     model = Client
     fields = ('name', 'email', 'comment',)
     success_url = reverse_lazy('eservice:client_list')
+    login_url = reverse_lazy('users:login')
 
 
 class ClientListView(ListView):
@@ -22,14 +25,16 @@ class ClientDetailView(DetailView):
     model = Client
 
 
-class ClientUpdateView(UpdateView):
+class ClientUpdateView(LoginRequiredMixin, UpdateView):
     model = Client
     fields = ('name', 'email', 'comment',)
+    login_url = reverse_lazy('users:login')
 
     def get_success_url(self):
         return reverse('eservice:client_detail', args=[self.kwargs.get('pk')])
 
 
+@login_required(login_url=reverse_lazy('users:login'))
 def client_delete(request, pk):
     client = get_object_or_404(Client, pk=pk)
     client.delete()
@@ -37,10 +42,11 @@ def client_delete(request, pk):
 
 
 # Контроллеры для Message
-class MessageCreateView(CreateView):
+class MessageCreateView(LoginRequiredMixin, CreateView):
     model = Message
     fields = ('subject', 'body')
     success_url = reverse_lazy('eservice:message_list')
+    login_url = reverse_lazy('users:login')
 
 
 class MessageListView(ListView):
@@ -57,14 +63,16 @@ class MessageDetailView(DetailView):
         return redirect('eservice:message_list')
 
 
-class MessageUpdateView(UpdateView):
+class MessageUpdateView(LoginRequiredMixin, UpdateView):
     model = Message
     fields = ('subject', 'body')
+    login_url = reverse_lazy('users:login')
 
     def get_success_url(self):
         return reverse('eservice:message_detail', args=[self.kwargs.get('pk')])
 
 
+@login_required(login_url=reverse_lazy('users:login'))
 def message_delete(request, pk):
     message = get_object_or_404(Message, pk=pk)
     message.delete()
@@ -72,15 +80,16 @@ def message_delete(request, pk):
 
 
 # Контроллеры для Newsletter
-class NewsletterCreateView(CreateView):
+class NewsletterCreateView(LoginRequiredMixin, CreateView):
     model = Newsletter
     form_class = NewsletterForm
     success_url = reverse_lazy('eservice:newsletter_list')
+    login_url = reverse_lazy('users:login')
 
     def form_valid(self, form):
         if form.is_valid():
             new_newsletter = form.save()
-            new_newsletter.new_newsletter.set_next_sent_datetime()
+            new_newsletter.set_next_sent_datetime()
             new_newsletter.refresh_status()
             new_newsletter.save()
         return super().form_valid(form)
@@ -107,9 +116,10 @@ class NewsletterDetailView(DetailView):
         return context
 
 
-class NewsletterUpdateView(UpdateView):
+class NewsletterUpdateView(LoginRequiredMixin, UpdateView):
     model = Newsletter
     form_class = NewsletterForm
+    login_url = reverse_lazy('users:login')
 
     def get_success_url(self):
         return reverse('eservice:newsletter_detail', args=[self.kwargs.get('pk')])
@@ -123,6 +133,7 @@ class NewsletterUpdateView(UpdateView):
         return super().form_valid(form)
 
 
+@login_required(login_url=reverse_lazy('users:login'))
 def newsletter_delete(request, pk):
     message = get_object_or_404(Newsletter, pk=pk)
     message.delete()

@@ -30,7 +30,7 @@
                     </tbody>
                 </table>
 
-
+                {% if user.is_authenticated %}
                 <div class="btn-group">
                     <a type="button" class="btn btn-outline-primary"
                        href="{% url 'eservice:newsletter_update' object.pk %}">
@@ -41,8 +41,8 @@
                         Удалить
                     </button>
                 </div>
-
                 {% include 'eservice/includes/inc_modal_newsletter_confirm_delete.html'%}
+                {% endif %}
             </div>
         </div>
     </div>

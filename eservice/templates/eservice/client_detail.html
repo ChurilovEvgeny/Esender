@@ -16,6 +16,7 @@
             <div class="card-body">
                 <p class="mt-3 mb-4 text-start m-3">{{ object.pk }}</p>
                 <p class="mt-3 mb-4 text-start m-3">{{ object.comment }}</p>
+                {% if user.is_authenticated %}
                 <div class="btn-group">
                     <a type="button" class="btn btn-outline-primary"
                        href="{% url 'eservice:client_update' object.pk %}">
@@ -26,8 +27,8 @@
                         Удалить
                     </button>
                 </div>
-
                 {% include 'eservice/includes/inc_modal_client_confirm_delete.html'%}
+                {% endif %}
             </div>
         </div>
     </div>

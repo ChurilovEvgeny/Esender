@@ -1,12 +1,14 @@
 {% extends 'eservice/base.html'%}
 {% load custom_tags %}
 {% block content %}
+{% if user.is_authenticated %}
 <div class="row text-center">
     <a type="button" class="btn btn-outline-primary"
        href="{% url 'eservice:client_create'%}">
         Добавить нового клиента
     </a>
 </div>
+{% endif %}
 <div class="row text-center">
     <div class="row text-center">
         {% if page_obj.paginator.num_pages == 1 and page_obj|length == 0 %}
