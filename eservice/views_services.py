@@ -1,22 +1,25 @@
-from django.contrib.auth.mixins import AccessMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import AccessMixin, UserPassesTestMixin, LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 
 from eservice.models import Message
 
 
+def is_user_manager(user):
+    return user.has_perm('eservice.manager')
+
+
 def is_super_or_manager(current_user):
-    """Получать весь список объектов может супер или менеджер"""
-    return current_user.is_superuser or current_user.has_perm('eservice.manager')
+    return current_user.is_superuser or is_user_manager(current_user)
 
 
-def is_super_or_owner(current_user, object_owner):
-    """Непосредственно перед удалением объекта дополнительная проверка на валидного пользователя"""
-    return current_user.is_superuser or current_user == object_owner
+def is_super_or_owner(*args, **kwargs):
+    return kwargs.get('current_user').is_superuser or kwargs['current_user'] == kwargs['object_owner']
 
 
-def is_super_or_owner_or_manger(current_user, object_owner):
-    return is_super_or_manager(current_user) or is_super_or_owner(current_user, object_owner)
+def is_super_or_owner_or_manger(*args, **kwargs):
+    return is_super_or_owner(current_user=kwargs['current_user'],
+                             object_owner=kwargs['object_owner']) or is_user_manager(kwargs['current_user'])
 
 
 class CustomLoginRequiredMixin(AccessMixin):
@@ -25,19 +28,36 @@ class CustomLoginRequiredMixin(AccessMixin):
     и проверки, что пользователь супер или же владелец объекта
     """
     login_url = reverse_lazy('users:login')
+    login_func = is_super_or_owner
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
         obj = get_object_or_404(self.model, pk=kwargs.get('pk', 0))
-        if not is_super_or_owner(request.user, obj.owner):
+        if not self.login_func(current_user=request.user, object_owner=obj.owner):
             return self.handle_no_permission()
 
         return super().dispatch(request, *args, **kwargs)
 
     def handle_no_permission(self):
         return redirect(self.login_url)
+
+
+class CustomLoginRequiredMixin2(CustomLoginRequiredMixin):
+    """
+    Миксин для проверки на авторизацию, как реализовано в LoginRequiredMixin,
+    и проверки, что пользователь супер, менеджер или же владелец объекта
+    """
+    login_func = is_super_or_owner_or_manger
+
+
+class CustomLoginRequiredMixin3(LoginRequiredMixin):
+    """
+    Миксин для авторизации как реализовано в LoginRequiredMixin,
+    но c указанным login_url
+    """
+    login_url = reverse_lazy('users:login')
 
 
 class AutoOwnerMixin:
@@ -79,23 +99,24 @@ class ObjectDetailAccessMixin(UserPassesTestMixin):
 
     def test_func(self):
         obj = super().get_object(None)
-        return is_super_or_owner_or_manger(self.request.user, obj.owner)
+        return is_super_or_owner_or_manger(current_user=self.request.user, object_owner=obj.owner)
 
     def handle_no_permission(self):
         return redirect(self.login_url)
 
 
-def delete(request, pk):
+def delete(model, request, pk):
     """
     Удаление объекта, проверяя его владельца с помощью is_super_or_owner.
     Если удаляется объект, перенаправляет на страницу списка рассылок.
     Если не удаляется, перенаправляет на страницу авторизации.
+    :param model: Обрабатываемая модель
     :param request: HttpRequest
     :param pk: int
     :return: HttpResponse
     """
-    obj = get_object_or_404(Message, pk=pk)
-    if is_super_or_owner(request.user, obj.owner):
+    obj = get_object_or_404(model, pk=pk)
+    if is_super_or_owner(current_user=request.user, object_owner=obj.owner):
         obj.delete()
         return redirect('eservice:newsletter_list')
 
