@@ -26,3 +26,23 @@ class NewsletterAdmin(admin.ModelAdmin):
     # возможно стоит решить проблема с 'clients'
     list_display = ('date_time_first_sent', 'period', 'status', 'message',)
     list_filter = ('status', 'period')
+
+    def get_readonly_fields(self, request, obj=None):
+        # Для супер доступны полностью настройки пользователя
+        # Для менеджера доступны только поля is_active
+        # Во всех остальных случаях все поля недоступны.
+        if request.user.is_superuser:
+            return super().get_readonly_fields(request, obj=obj)
+        if request.user.groups.filter(name='Manager').exists():
+            # Получаем список всех полей и исключаем period
+            readonly_fields = list(
+                set(
+                    [field.name for field in self.opts.local_fields] +
+                    [field.name for field in self.opts.local_many_to_many]
+                ))
+
+            if 'period' in readonly_fields:
+                readonly_fields.remove('period')
+
+            return readonly_fields
+        return tuple()
