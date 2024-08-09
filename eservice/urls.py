@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 
 from eservice.apps import EserviceConfig
@@ -31,5 +32,5 @@ urlpatterns = [
     path('newsletter_detail/<int:pk>', NewsletterDetailView.as_view(), name='newsletter_detail'),
     path('newsletter_delete/<int:pk>', newsletter_delete, name='newsletter_delete'),
 
-    path('attempts_newsletter_list', AttemptsNewsletterListView.as_view(), name='attempts_newsletter_list'),
+    path('attempts_newsletter_list', cache_page(60)(AttemptsNewsletterListView.as_view()), name='attempts_newsletter_list'),
 ]

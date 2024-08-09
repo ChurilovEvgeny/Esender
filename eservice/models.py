@@ -5,6 +5,8 @@ from django.db import models
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
+from eservice.models_services import get_cached_newsletters_count, get_cached_unique_clients_count, \
+    get_cached_total_active_newsletters
 from users.models import User
 
 NULLABLE = {"blank": True, "null": True}
@@ -34,7 +36,7 @@ class Client(models.Model):
 
     @classmethod
     def get_unique_clients_count(cls):
-        return cls.objects.all().distinct("email").count()
+        return get_cached_unique_clients_count(cls)
 
     def __str__(self):
         return f"{self.name} - {self.email}"
@@ -147,6 +149,7 @@ class Newsletter(models.Model):
         query = Q(status=cls.STATUS_CREATED)
         query.add(Q(status=cls.STATUS_LAUNCHED), Q.OR)
         query.add(Q(date_time_next_sent__lte=now_time), Q.AND)
+        query.add(Q(date_time_first_sent__lte=now_time), Q.AND)
         query.add(~Q(period=cls.PERIOD_DISABLE), Q.AND)
 
         newsletters = cls.objects.filter(query)
@@ -191,9 +194,10 @@ class Newsletter(models.Model):
 
         match self.period:
             case self.PERIOD_EVERY_DAY:
-                # self.date_time_next_sent = get_next_day_date(date_time_start_sent, now_time)
-                delta = timezone.timedelta(minutes=2)
-                self.date_time_next_sent = now_time + delta
+                self.date_time_next_sent = get_next_day_date(date_time_start_sent, now_time)
+                # Сугубо для тестов
+                # delta = timezone.timedelta(minutes=2)
+                # self.date_time_next_sent = now_time + delta
                 self.date_time_next_sent = self.date_time_next_sent.replace(
                     second=0, microsecond=0)
 
@@ -240,11 +244,11 @@ class Newsletter(models.Model):
 
     @classmethod
     def get_total_newsletters(cls):
-        return cls.objects.all().count()
+        return get_cached_newsletters_count(cls)
 
     @classmethod
     def get_total_active_newsletters(cls):
-        return cls.objects.filter(status=cls.STATUS_LAUNCHED).count()
+        return get_cached_total_active_newsletters(cls)
 
     def __str__(self):
         return f"Рассылка {self.message.subject}; Начало: {self.date_time_first_sent}; Окончание: {self.date_time_last_sent}; След.: {self.date_time_next_sent}; {self.period}; {self.status}"
