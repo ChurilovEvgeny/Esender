@@ -17,8 +17,8 @@
                         <th>Дата/время окончания рассылки</th>
                         <th>Период рассылки</th>
                         <th>Дата/время попытки рассылки</th>
-                        <th>Клиенты</th>
-                        <th>Клиенты</th>
+                        <th>Успешно</th>
+                        <th>Ответ сервера</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -32,7 +32,7 @@
                         <td>{{ object.status }}</td>
                         <td>{{ object.mail_server_response }}</td>
                     </tr>
-                    {% endfor%}
+                    {% endfor %}
                     </tbody>
                 </table>
             </div>
