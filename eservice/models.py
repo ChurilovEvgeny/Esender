@@ -147,6 +147,7 @@ class Newsletter(models.Model):
         query = Q(status=cls.STATUS_CREATED)
         query.add(Q(status=cls.STATUS_LAUNCHED), Q.OR)
         query.add(Q(date_time_next_sent__lte=now_time), Q.AND)
+        query.add(~Q(period=cls.PERIOD_DISABLE), Q.AND)
 
         newsletters = cls.objects.filter(query)
         return newsletters
