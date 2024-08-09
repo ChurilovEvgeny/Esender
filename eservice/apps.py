@@ -1,3 +1,4 @@
+import os
 from time import sleep
 
 from django.apps import AppConfig
@@ -9,9 +10,10 @@ from config.settings import NEWSLETTERING_ENABLED
 def start_newslettering():
     if NEWSLETTERING_ENABLED:
         sleep(2)
-        from eservice.services import run_application_scheduler
-        run_application_scheduler()
-        # call_command('runapscheduler')
+        if os.environ.get('RUN_MAIN'):
+            # os.environ.get('RUN_MAIN') рабочий способ для запуска только ОДНОГО планировщика
+            from eservice.services import run_application_scheduler
+            run_application_scheduler()
 
 
 class EserviceConfig(AppConfig):

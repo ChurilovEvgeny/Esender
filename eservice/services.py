@@ -10,41 +10,44 @@ from eservice.email import send
 from eservice.models import Newsletter, AttemptsNewsletter
 
 
-def job_every_minute():
-    print("Новая минута...")
-
-    newsletters = Newsletter.get_newsletters_ready_to_sent()
-    for newsletter in newsletters:
-        operation_result = send(newsletter)
-
-        newsletter.set_next_sent_datetime()
-        newsletter.refresh_status()
-
-        AttemptsNewsletter.objects.create(
-            newsletter=newsletter,
-            date_time_last_sent=operation_result[0],
-            status=operation_result[1],
-            mail_server_response=operation_result[2],
-            owner=newsletter.owner
-        )
-
-
-@util.close_old_connections
-def delete_old_job_executions(max_age=604_800):
-    DjangoJobExecution.objects.delete_old_job_executions(max_age)
-
-
 def run_standalone_scheduler():
+    """
+    Данная функция для запуска планировщика должна вызываться командной строки python manage.py runapscheduler,
+    так как в ней используется BlockingScheduler, который работает сам по себе и может заблокировать основной поток
+    (Как альтернатива, запуск через отдельный поток по примеру, но и в таком варианте есть проблемы)
+            # from django.core.management import call_command
+            # def callback():
+            #     call_command('runapscheduler')
+            #
+            # from threading import Thread
+            # thr = Thread(target=callback)
+            # thr.start()
+    """
     scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
     scheduler.add_jobstore(DjangoJobStore(), "default")
 
+    add_jobs_executions(scheduler)
+
+
+def run_application_scheduler():
+    """
+    Данная функция для запуска планировщика должна вызываться из веб приложения,
+    так как в ней используется BackgroundScheduler, который опирается на основной процесс
+    """
+    scheduler = BackgroundScheduler(timezone=settings.TIME_ZONE)
+    scheduler.add_jobstore(DjangoJobStore(), "default")
+
+    add_jobs_executions(scheduler)
+
+
+def add_jobs_executions(scheduler):
     scheduler.add_job(
         job_every_minute,
-        trigger=CronTrigger(minute="*/1"),  # Every 1 minute
-        # trigger=CronTrigger(second="*/10"),  # Every 1 minute
+        trigger='interval',
+        minutes=1,
         id="job_every_minute",  # The `id` assigned to each job MUST be unique
         max_instances=1,
-        replace_existing=True,
+        replace_existing=True
     )
     print("Добавлена новая задача")
 
@@ -59,27 +62,37 @@ def run_standalone_scheduler():
     )
     print("Добавлена еженедельная задача удаления старых данных")
 
-    try:
-        print("Запуск планировщика...")
-        scheduler.start()
-    except KeyboardInterrupt:
-        print("Остановка планировщика...")
-        scheduler.shutdown()
-        print("Планировщик успешно остановлен!")
-
-
-def run_application_scheduler():
-    """Данная функция для запуска планировщика должна вызываться из веб приложения,
-    так как в ней используеютися BackgroundScheduler, который опирается на """
-    DjangoJobExecution.objects.delete_old_job_executions(0)
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(job_every_minute, 'interval', minutes=1)
-    # scheduler.add_job(f,
-    #                   trigger=CronTrigger(minute="*/1"),  # Every 1 minute)
-    #                   id="job_every_minute",  # The `id` assigned to each job MUST be unique
-    #                   max_instances=1,
-    #                   replace_existing=True,
-    #                   )
+    print("Запуск планировщика...")
     scheduler.start()
 
 
+def job_every_minute():
+    """
+    Периодическая выполняемая задача
+    """
+    print("Новая минута...")
+
+    newsletters = Newsletter.get_newsletters_ready_to_sent()
+    for newsletter in newsletters:
+        operation_result = send(newsletter)
+
+        # При каждой отправке обновляем следующее время и статус рассылки
+        newsletter.set_next_sent_datetime()
+        newsletter.refresh_status()
+
+        # Сохранение результатов рассылки
+        AttemptsNewsletter.objects.create(
+            newsletter=newsletter,
+            date_time_last_sent=operation_result[0],
+            status=operation_result[1],
+            mail_server_response=operation_result[2],
+            owner=newsletter.owner
+        )
+
+
+@util.close_old_connections
+def delete_old_job_executions(max_age=604_800):
+    """
+    Задача по очистке логов выполнения каждую неделю
+    """
+    DjangoJobExecution.objects.delete_old_job_executions(max_age)
