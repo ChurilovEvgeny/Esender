@@ -1,0 +1,61 @@
+{% extends 'eservice/base.html'%}
+{% load custom_tags %}
+{% block content %}
+{% if user.is_authenticated %}
+<div class="row text-center">
+    <a type="button" class="btn btn-outline-primary"
+       href="{% url 'eservice:newsletter_create'%}">
+        Добавить новую рассылку
+    </a>
+</div>
+{% endif %}
+<div class="row text-center">
+    <div class="row text-center">
+        {% if page_obj.paginator.num_pages == 1 and page_obj|length == 0 %}
+        <h2 class="mb-4">Список рассылок пуст</h2>
+        {% else %}
+        <h2 class="mb-4">Список внесенных рассылок</h2>
+        {% for obj in page_obj %}
+        <div class="col-3">
+            <div class="card mb-4 box-shadow d-flex align-items-stretch">
+                {% if user.is_authenticated and perms.eservice.manager or user.is_superuser %}
+                <div class="card-header">
+                    <h6 class="my-0 font-weight-italic">Владелец: {{ obj.owner }}</h6>
+                </div>
+                {% endif %}
+                <div class="card-header">
+                    <h4 class="my-0 font-weight-normal">{{ obj.message }}</h4>
+                </div>
+                <div class="card-header">
+                    <h6 class="my-0 font-weight-normal">{{ obj.date_time_first_sent }}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group">
+                        <a type="button" class="btn btn-outline-primary"
+                           href="{% url 'eservice:newsletter_detail' obj.pk %}">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div id="pages" align="center">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
+            {% endif %}
+
+            <span class="current">
+                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Следующая</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock%}

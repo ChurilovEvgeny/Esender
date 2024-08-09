@@ -1,0 +1,59 @@
+{% extends 'eservice/base.html' %}
+{% block content %}
+<div class="row text-center">
+    <div class="col-12">
+        <div class="card mb-4 box-shadow">
+            <div class="card-header">
+                <div class="col">
+                    <h4 class="my-0 font-weight-normal">Статистика попыток рассылок</h4>
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-light">
+                    <tr>
+                        <th>Тема сообщения</th>
+                        <th>Дата/время начала рассылки</th>
+                        <th>Дата/время окончания рассылки</th>
+                        <th>Период рассылки</th>
+                        <th>Дата/время попытки рассылки</th>
+                        <th>Успешно</th>
+                        <th>Ответ сервера</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for object in page_obj %}
+                    <tr>
+                        <td>{{ object.newsletter.message.subject }}</td>
+                        <td>{{ object.newsletter.date_time_first_sent }}</td>
+                        <td>{{ object.newsletter.date_time_last_sent }}</td>
+                        <td>{{ object.newsletter.get_period_display }}</td>
+                        <td>{{ object.date_time_last_sent }}</td>
+                        <td>{{ object.status }}</td>
+                        <td>{{ object.mail_server_response }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div id="pages" align="center">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
+            {% endif %}
+
+            <span class="current">
+                Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Следующая</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+{% endblock %}

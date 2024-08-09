@@ -1,0 +1,24 @@
+<!-- The Modal -->
+<div class="modal fade" id="myModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Удалить клиента</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                Вы действительно хотите удалить клиента {{ object }}?
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Отмена</button>
+                <a href="{% url 'eservice:client_delete' object.pk %}" class="btn btn-outline-danger">Удалить</a>
+            </div>
+        </div>
+    </div>
+</div>

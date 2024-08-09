@@ -1,0 +1,30 @@
+{% extends 'eservice/base.html'%}
+{% load custom_tags %}
+{% block content %}
+<div class="row text-center">
+    <div class="row text-center">
+        {% if object_list|length == 0 %}
+        <h2 class="mb-4">Список блогов пуст</h2>
+        {% else %}
+        <h2 class="mb-4">Список наших блогов</h2>
+        {% for blog in object_list %}
+        <div class="col-4">
+            <div class="card mb-4 box-shadow">
+                <div class="card-header">
+                    <h4 class="my-0 font-weight-normal">{{ blog.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <p class="mt-3 mb-4 text-start m-3">{{ blog.content|truncatechars:10 }}</p>
+                    <div class="btn-group">
+                        <a type="button" class="btn btn-outline-primary"
+                           href="#">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
